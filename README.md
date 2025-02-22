@@ -18,7 +18,7 @@ A Go library and CLI tool to get transcripts/subtitles from YouTube videos. This
 
 ```bash
 # Install the CLI tool
-go install github.com/horiagug/youtube-transcript-api-go@latest
+go install github.com/horiagug/youtube-transcript-api-go/cmd/yt_transcript@latest
 ```
 
 ### As a Library
@@ -32,7 +32,7 @@ go get github.com/horiagug/youtube-transcript-api-go
 
 ```bash
 # Basic usage
-youtube-transcript-api-go [flags] VIDEO_ID
+yt_transcript [flags] VIDEO_ID
 
 # Flags:
   -languages string
@@ -53,13 +53,16 @@ youtube-transcript-api-go [flags] VIDEO_ID
 
 ```bash
 # Get English transcripts in JSON format
-youtube-transcript-api-go dQw4w9WgXcQ
+yt_transcript dQw4w9WgXcQ
+
+# The entire url of the video can also be passed
+yt_transcript "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 # Get Spanish transcripts in text format
-youtube-transcript-api-go -languages es -formatter text dQw4w9WgXcQ
+yt_transcript -languages es -formatter text u6aZYZv3duo
 
 # Get transcripts without timestamps
-youtube-transcript-api-go -with_timestamps=false dQw4w9WgXcQ
+yt_transcript -with_timestamps=false dQw4w9WgXcQ
 ```
 
 ## Library Usage
@@ -126,6 +129,13 @@ client := client.NewClient(
     client.WithFormatter(jsonFormatter),
 )
 ```
+
+## TODO:
+
+- [ ] Consolidate error handling
+- [ ] Custom formatters
+- [ ] Add more tests
+- [ ] Add (optional) logging
 
 ## Contributing
 

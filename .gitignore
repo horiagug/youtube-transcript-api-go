@@ -22,3 +22,5 @@ go.work.sum
 .env
 
 tmp
+
+codecompanion-workspace.json

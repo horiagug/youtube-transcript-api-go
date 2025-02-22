@@ -72,13 +72,12 @@ func (t *TranscriptService) processCaptionTracks(video_id string, captionTracks 
 			}
 
 			result := models.Transcript{
-				VideoID:              video_id,
-				Language:             tr.Name.SimpleText,
-				LanguageCode:         tr.LanguageCode,
-				IsGenerated:          is_generated,
-				IsTranslatable:       tr.IsTranslatable,
-				TranslationLanguages: nil, //TODO: Deal with this later
-				Lines:                lines,
+				VideoID:        video_id,
+				Language:       tr.Name.SimpleText,
+				LanguageCode:   tr.LanguageCode,
+				IsGenerated:    is_generated,
+				IsTranslatable: tr.IsTranslatable,
+				Lines:          lines,
 			}
 
 			resultChan <- transcriptResult{transcript: result}

@@ -1,13 +1,12 @@
 package models
 
 type Transcript struct {
-	VideoID              string
-	Language             string
-	LanguageCode         string
-	IsGenerated          bool
-	IsTranslatable       bool
-	TranslationLanguages *[]string
-	Lines                []TranscriptLine
+	VideoID        string
+	Language       string
+	LanguageCode   string
+	IsGenerated    bool
+	IsTranslatable bool
+	Lines          []TranscriptLine
 }
 
 type TranscriptLine struct {

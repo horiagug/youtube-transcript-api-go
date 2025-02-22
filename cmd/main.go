@@ -42,12 +42,12 @@ func main() {
 		)
 	}
 
-	client := client.New(
+	client := client.NewClient(
 		client.WithFormatter(outputFormatter),
 	)
 
 	videoID := flag.Arg(0)
-	t, err := client.GetTranscript(videoID, []string{*languages}, *preserve_formatting)
+	t, err := client.GetFormattedTranscripts(videoID, []string{*languages}, *preserve_formatting)
 
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)

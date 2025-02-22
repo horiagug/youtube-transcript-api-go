@@ -15,11 +15,11 @@ func WithCustomFetcher(fetcher service.HTMLFetcherType) Option {
 
 func WithTimeout(seconds int) Option {
 	return func(c *Client) {
-		c.timeout = seconds
+		c.Timeout = seconds
 	}
 }
 func WithFormatter(formatter formatters.Formatter) Option {
 	return func(c *Client) {
-		c.formatter = formatter
+		c.Formatter = formatter
 	}
 }

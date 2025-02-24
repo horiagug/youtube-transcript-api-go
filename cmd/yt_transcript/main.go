@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/client"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/formatters"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
 )
 
 func main() {
@@ -30,20 +30,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	var outputFormatter formatters.Formatter
+	var outputFormatter yt_transcript_formatters.Formatter
 
 	if *formatter == "text" {
-		outputFormatter = formatters.NewTextFormatter(
-			formatters.WithTimestamps(*with_timestamps),
+		outputFormatter = yt_transcript_formatters.NewTextFormatter(
+			yt_transcript_formatters.WithTimestamps(*with_timestamps),
 		)
 	} else {
-		outputFormatter = formatters.NewJSONFormatter(
-			formatters.WithTimestamps(*with_timestamps),
+		outputFormatter = yt_transcript_formatters.NewJSONFormatter(
+			yt_transcript_formatters.WithTimestamps(*with_timestamps),
 		)
 	}
 
-	client := client.NewClient(
-		client.WithFormatter(outputFormatter),
+	client := yt_transcript.NewClient(
+		yt_transcript.WithFormatter(outputFormatter),
 	)
 
 	videoID := flag.Arg(0)

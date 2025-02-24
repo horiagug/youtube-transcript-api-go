@@ -72,15 +72,15 @@ package main
 
 import (
     "fmt"
-    "github.com/horiagug/youtube-transcript-api-go/pkg/client"
-    "github.com/horiagug/youtube-transcript-api-go/pkg/formatters"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
 )
 
 func main() {
     // Create a new client with JSON formatter
-    client := client.NewClient(
-        client.WithFormatter(formatters.NewJSONFormatter()),
-    )
+	client := yt_transcript.NewClient(
+		yt_transcript.WithFormatter(yt_transcript_formatters.WithTimestamps(false)),
+	)
 
     // Get formatted transcripts
     videoID := "dQw4w9WgXcQ"
@@ -114,19 +114,19 @@ The library supports both JSON and Text formatters with configurable options:
 
 ```go
 // JSON formatter with custom options
-jsonFormatter := formatters.NewJSONFormatter(
-    formatters.WithPrettyPrint(true),
-    formatters.WithTimestamps(true),
+jsonFormatter := yt_transcript_formatters.NewJSONFormatter(
+    yt_transcript_formatters.WithPrettyPrint(true),
+    yt_transcript_formatters.WithTimestamps(true),
 )
 
 // Text formatter with custom options
-textFormatter := formatters.NewTextFormatter(
-    formatters.WithTimestamps(true),
+textFormatter := yt_transcript_formatters.NewTextFormatter(
+    yt_transcript_formatters.WithTimestamps(true),
 )
 
 // Use formatter with client
-client := client.NewClient(
-    client.WithFormatter(jsonFormatter),
+client := yt_transcript.NewClient(
+    yt_transcript.WithFormatter(jsonFormatter),
 )
 ```
 

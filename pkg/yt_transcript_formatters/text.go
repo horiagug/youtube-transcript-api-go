@@ -1,10 +1,10 @@
-package formatters
+package yt_transcript_formatters
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 type TextFormatter struct {
@@ -25,7 +25,7 @@ func NewTextFormatter(options ...FormatterOption) *TextFormatter {
 	return f
 }
 
-func (t *TextFormatter) Format(transcripts []models.Transcript) (string, error) {
+func (t *TextFormatter) Format(transcripts []yt_transcript_models.Transcript) (string, error) {
 
 	var (
 		text strings.Builder

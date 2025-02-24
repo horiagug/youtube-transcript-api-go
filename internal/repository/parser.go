@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
-// TranscriptParser struct handles transcript parsing
-type TranscriptParser struct {
+// transcriptParser struct handles transcript parsing
+type transcriptParser struct {
 	htmlRegex *regexp.Regexp
 }
 
@@ -23,9 +23,9 @@ var formattingTags = []string{
 var htmlRegex = regexp.MustCompile(`(?i)<[^>]*>`)
 
 // NewTranscriptParser initializes the parser with or without preserving formatting tags
-func NewTranscriptParser(preserveFormatting bool) *TranscriptParser {
+func NewTranscriptParser(preserveFormatting bool) *transcriptParser {
 	htmlRegex := getHTMLRegex(preserveFormatting)
-	return &TranscriptParser{htmlRegex: htmlRegex}
+	return &transcriptParser{htmlRegex: htmlRegex}
 }
 
 // getHTMLRegex returns a regex pattern for removing unwanted HTML tags
@@ -55,7 +55,7 @@ func cleanHTML(text string, preserveFormatting bool) string {
 }
 
 // Parse extracts transcript text, start time, and duration from XML
-func (p *TranscriptParser) Parse(plainData string) ([]models.TranscriptLine, error) {
+func (p *transcriptParser) Parse(plainData string) ([]yt_transcript_models.TranscriptLine, error) {
 	type XMLTranscript struct {
 		XMLName xml.Name `xml:"transcript"`
 		Texts   []struct {
@@ -71,7 +71,7 @@ func (p *TranscriptParser) Parse(plainData string) ([]models.TranscriptLine, err
 		return nil, err
 	}
 
-	var results []models.TranscriptLine
+	var results []yt_transcript_models.TranscriptLine
 	for _, entry := range parsedXML.Texts {
 		// First clean HTML, then unescape HTML entities
 		text := cleanHTML(entry.Text, false)
@@ -87,7 +87,7 @@ func (p *TranscriptParser) Parse(plainData string) ([]models.TranscriptLine, err
 			duration = 0.0
 		}
 
-		results = append(results, models.TranscriptLine{
+		results = append(results, yt_transcript_models.TranscriptLine{
 			Text:     text,
 			Start:    start,
 			Duration: duration,

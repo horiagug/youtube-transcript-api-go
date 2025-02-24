@@ -1,9 +1,9 @@
-package formatters
+package yt_transcript_formatters
 
 import (
 	"encoding/json"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 type JSONTranscriptLine struct {
@@ -50,7 +50,7 @@ func (f *JSONFormatter) Configure(options ...JSONFormatterOption) {
 	}
 }
 
-func (f *JSONFormatter) Format(transcripts []models.Transcript) (string, error) {
+func (f *JSONFormatter) Format(transcripts []yt_transcript_models.Transcript) (string, error) {
 	jsonTranscripts := make([]JSONTranscripts, len(transcripts))
 
 	for i, transcript := range transcripts {

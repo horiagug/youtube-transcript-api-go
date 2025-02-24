@@ -1,13 +1,13 @@
-package formatters
+package yt_transcript_formatters
 
 import (
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 // Formatter defines the interface for transcript formatters
 type Formatter interface {
 	// Format converts transcript lines into a specific format
-	Format(transcripts []models.Transcript) (string, error)
+	Format(transcripts []yt_transcript_models.Transcript) (string, error)
 }
 
 // BaseFormatter contains common formatting utilities

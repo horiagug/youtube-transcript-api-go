@@ -9,6 +9,11 @@ import (
 
 var video_base_url = "https://www.youtube.com/watch?v=%s"
 
+type HTMLFetcherType interface {
+	Fetch(url string, cookie *http.Cookie) ([]byte, error)
+	FetchVideo(videoID string) ([]byte, error)
+}
+
 type HTMLFetcher struct{}
 
 func NewHTMLFetcher() *HTMLFetcher {

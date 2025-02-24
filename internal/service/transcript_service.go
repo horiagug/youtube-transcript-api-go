@@ -3,60 +3,58 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/repository"
+	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
-type TranscriptService struct {
-	fetcher HTMLFetcherType
+type TranscriptService interface {
+	GetTranscripts(videoID string, langauges []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error)
 }
 
-type HTMLFetcherType interface {
-	Fetch(url string, cookie *http.Cookie) ([]byte, error)
-	FetchVideo(videoID string) ([]byte, error)
+type transcriptService struct {
+	fetcher repository.HTMLFetcherType
 }
 
-func NewTranscriptService(fetcher HTMLFetcherType) *TranscriptService {
-	return &TranscriptService{
+type transcriptResult struct {
+	transcript yt_transcript_models.Transcript
+	err        error
+}
+
+func NewTranscriptService(fetcher repository.HTMLFetcherType) *transcriptService {
+	return &transcriptService{
 		fetcher: fetcher,
 	}
 }
 
-func (t *TranscriptService) GetTranscripts(videoID string, languages []string, preserve_formatting bool) ([]models.Transcript, error) {
+func (t transcriptService) GetTranscripts(videoID string, languages []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
 
 	videoID = sanitizeVideoId(videoID)
 
 	trascript_data, err := t.extractTranscriptList(videoID)
 	if err != nil {
-		return []models.Transcript{}, fmt.Errorf("failed to extract list of transcripts: %w", err)
+		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to extract list of transcripts: %w", err)
 	}
 
 	transcripts, err := t.getTranscriptsForLanguage(languages, *trascript_data)
 	if err != nil {
-		return []models.Transcript{}, fmt.Errorf("failed to get transcript: %w", err)
+		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to get transcript: %w", err)
 	}
 
 	return t.processCaptionTracks(videoID, transcripts, preserve_formatting), nil
 }
 
-type transcriptResult struct {
-	transcript models.Transcript
-	err        error
-}
-
-func (t *TranscriptService) processCaptionTracks(video_id string, captionTracks []models.CaptionTrack, preserve_formatting bool) []models.Transcript {
+func (t *transcriptService) processCaptionTracks(video_id string, captionTracks []yt_transcript_models.CaptionTrack, preserve_formatting bool) []yt_transcript_models.Transcript {
 	resultChan := make(chan transcriptResult, len(captionTracks))
 	var wg sync.WaitGroup
 
 	// Launch goroutines for each caption track
 	for _, transcript := range captionTracks {
 		wg.Add(1)
-		go func(tr models.CaptionTrack) {
+		go func(tr yt_transcript_models.CaptionTrack) {
 			defer wg.Done()
 
 			// Process single transcript
@@ -71,7 +69,7 @@ func (t *TranscriptService) processCaptionTracks(video_id string, captionTracks 
 				return
 			}
 
-			result := models.Transcript{
+			result := yt_transcript_models.Transcript{
 				VideoID:        video_id,
 				Language:       tr.Name.SimpleText,
 				LanguageCode:   tr.LanguageCode,
@@ -91,7 +89,7 @@ func (t *TranscriptService) processCaptionTracks(video_id string, captionTracks 
 	}()
 
 	// Collect results
-	var results []models.Transcript
+	var results []yt_transcript_models.Transcript
 	for result := range resultChan {
 		if result.err != nil {
 			fmt.Printf("Error processing transcript: %v\n", result.err)
@@ -102,7 +100,7 @@ func (t *TranscriptService) processCaptionTracks(video_id string, captionTracks 
 	return results
 }
 
-func (t *TranscriptService) extractTranscriptList(video_id string) (*models.TranscriptData, error) {
+func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcript_models.TranscriptData, error) {
 	// get the html
 	html, err := t.fetcher.FetchVideo(video_id)
 	if err != nil {
@@ -130,7 +128,7 @@ func (t *TranscriptService) extractTranscriptList(video_id string) (*models.Tran
 	video_details := strings.Split(parts[1], `,"videoDetails`)[0]
 	video_details_parsed := strings.ReplaceAll(video_details, "\n", "")
 
-	var videoDetails models.VideoDetails
+	var videoDetails yt_transcript_models.VideoDetails
 	err = json.Unmarshal([]byte(video_details_parsed), &videoDetails)
 	if err != nil {
 		fmt.Println("Error unmarshalling JSON")
@@ -146,13 +144,13 @@ func (t *TranscriptService) extractTranscriptList(video_id string) (*models.Tran
 	return transcripts, nil
 }
 
-func (s TranscriptService) getTranscriptsForLanguage(language []string, transcripts models.TranscriptData) ([]models.CaptionTrack, error) {
+func (s transcriptService) getTranscriptsForLanguage(language []string, transcripts yt_transcript_models.TranscriptData) ([]yt_transcript_models.CaptionTrack, error) {
 
 	if len(language) == 0 {
 		return transcripts.CaptionTracks, nil
 	}
 
-	caption_tracks := make([]models.CaptionTrack, 0)
+	caption_tracks := make([]yt_transcript_models.CaptionTrack, 0)
 
 	for _, lang := range language {
 		for _, track := range transcripts.CaptionTracks {
@@ -163,23 +161,23 @@ func (s TranscriptService) getTranscriptsForLanguage(language []string, transcri
 	}
 
 	if len(caption_tracks) == 0 {
-		return []models.CaptionTrack{}, fmt.Errorf("no transcript found for languages %s", language)
+		return []yt_transcript_models.CaptionTrack{}, fmt.Errorf("no transcript found for languages %s", language)
 	}
 
 	return caption_tracks, nil
 }
 
-func (s TranscriptService) getTranscriptFromTrack(track models.CaptionTrack, preserve_formatting bool) ([]models.TranscriptLine, error) {
+func (s transcriptService) getTranscriptFromTrack(track yt_transcript_models.CaptionTrack, preserve_formatting bool) ([]yt_transcript_models.TranscriptLine, error) {
 	body, err := s.fetcher.Fetch(track.BaseUrl, nil)
 	if err != nil {
-		return []models.TranscriptLine{}, fmt.Errorf("failed to fetch transcript: %w", err)
+		return []yt_transcript_models.TranscriptLine{}, fmt.Errorf("failed to fetch transcript: %w", err)
 	}
 
 	parser := repository.NewTranscriptParser(preserve_formatting)
 
 	transcript, err := parser.Parse(string(body))
 	if err != nil {
-		return []models.TranscriptLine{}, fmt.Errorf("failed to parse transcript: %w", err)
+		return []yt_transcript_models.TranscriptLine{}, fmt.Errorf("failed to parse transcript: %w", err)
 	}
 	return transcript, nil
 }

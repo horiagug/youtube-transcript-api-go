@@ -1,31 +1,31 @@
-package client
+package yt_transcript
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/formatters"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/repository"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/service"
+	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
+	"github.com/horiagug/youtube-transcript-api-go/internal/service"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_formatters"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
-type Client struct {
-	transcriptService *service.TranscriptService
+type YtTranscriptClient struct {
+	transcriptService service.TranscriptService
 	Timeout           int
-	Formatter         formatters.Formatter
+	Formatter         yt_transcript_formatters.Formatter
 }
 
 var preserve_formatting_default = false
 
-func NewClient(options ...Option) *Client {
+func NewClient(options ...Option) *YtTranscriptClient {
 
 	// Set default values
-	formatter := formatters.NewJSONFormatter()
-	formatter.Configure(formatters.WithPrettyPrint(true))
+	formatter := yt_transcript_formatters.NewJSONFormatter()
+	formatter.Configure(yt_transcript_formatters.WithPrettyPrint(true))
 
-	client := &Client{
+	client := &YtTranscriptClient{
 		Timeout:   30,
 		Formatter: formatter,
 	}
@@ -42,7 +42,7 @@ func NewClient(options ...Option) *Client {
 	return client
 }
 
-func (c *Client) GetFormattedTranscripts(videoID string, languages []string, preserve_formatting bool) (string, error) {
+func (c *YtTranscriptClient) GetFormattedTranscripts(videoID string, languages []string, preserve_formatting bool) (string, error) {
 	_, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
 	defer cancel()
 
@@ -58,13 +58,13 @@ func (c *Client) GetFormattedTranscripts(videoID string, languages []string, pre
 	return c.Formatter.Format(transcripts)
 }
 
-func (c *Client) GetTranscripts(videoID string, languages []string) ([]models.Transcript, error) {
+func (c *YtTranscriptClient) GetTranscripts(videoID string, languages []string) ([]yt_transcript_models.Transcript, error) {
 	_, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
 	defer cancel()
 
 	transcripts, err := c.transcriptService.GetTranscripts(videoID, languages, true)
 	if err != nil {
-		return []models.Transcript{}, err
+		return []yt_transcript_models.Transcript{}, err
 	}
 
 	return transcripts, nil

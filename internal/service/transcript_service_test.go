@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/horiagug/youtube-transcript-api-go/pkg/models"
-	"github.com/horiagug/youtube-transcript-api-go/pkg/repository/fixtures"
+	"github.com/horiagug/youtube-transcript-api-go/internal/repository/fixtures"
+	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
 
 func TestNewTranscriptService(t *testing.T) {
@@ -26,7 +26,7 @@ func TestGetTranscripts(t *testing.T) {
 		mockVideoHTML      string
 		mockTranscriptXML  string
 		expectedError      error
-		expectedResult     []models.Transcript
+		expectedResult     []yt_transcript_models.Transcript
 	}{
 		{
 			name:               "Success case - Single transcript",
@@ -38,14 +38,14 @@ func TestGetTranscripts(t *testing.T) {
 		              <text start="0" dur="1">Hello world</text>
 		          </transcript>`,
 			expectedError: nil,
-			expectedResult: []models.Transcript{
+			expectedResult: []yt_transcript_models.Transcript{
 				{
 					VideoID:        "abc123",
 					Language:       "English",
 					LanguageCode:   "en",
 					IsGenerated:    false,
 					IsTranslatable: true,
-					Lines: []models.TranscriptLine{
+					Lines: []yt_transcript_models.TranscriptLine{
 						{
 							Text:     "Hello world",
 							Start:    0,
@@ -147,16 +147,16 @@ func TestProcessCaptionTracks(t *testing.T) {
 		fetcher := &fixtures.MockHTMLFetcher{}
 		service := NewTranscriptService(fetcher)
 
-		captionTracks := []models.CaptionTrack{
+		captionTracks := []yt_transcript_models.CaptionTrack{
 			{
 				BaseUrl:        "http://example.com/en",
-				Name:           models.LanguageName{SimpleText: "English"},
+				Name:           yt_transcript_models.LanguageName{SimpleText: "English"},
 				LanguageCode:   "en",
 				IsTranslatable: true,
 			},
 			{
 				BaseUrl:        "http://example.com/es",
-				Name:           models.LanguageName{SimpleText: "Spanish"},
+				Name:           yt_transcript_models.LanguageName{SimpleText: "Spanish"},
 				LanguageCode:   "es",
 				IsTranslatable: true,
 			},
@@ -184,10 +184,10 @@ func TestProcessCaptionTracks(t *testing.T) {
 		fetcher := &fixtures.MockHTMLFetcher{}
 		service := NewTranscriptService(fetcher)
 
-		captionTracks := []models.CaptionTrack{
+		captionTracks := []yt_transcript_models.CaptionTrack{
 			{
 				BaseUrl:      "http://example.com/en",
-				Name:         models.LanguageName{SimpleText: "English"},
+				Name:         yt_transcript_models.LanguageName{SimpleText: "English"},
 				LanguageCode: "en",
 			},
 		}

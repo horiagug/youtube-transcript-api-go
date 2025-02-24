@@ -1,4 +1,4 @@
-package models
+package yt_transcript_models
 
 type Transcript struct {
 	VideoID        string

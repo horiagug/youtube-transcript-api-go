@@ -39,15 +39,15 @@ func (t transcriptService) GetTranscripts(videoID string, languages []string, pr
 		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to extract list of transcripts: %w", err)
 	}
 
-	transcripts, err := t.getTranscriptsForLanguage(languages, *trascript_data)
+	transcripts, err := t.getTranscriptsForLanguage(languages, *trascript_data.Transcripts)
 	if err != nil {
 		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to get transcript: %w", err)
 	}
 
-	return t.processCaptionTracks(videoID, transcripts, preserve_formatting), nil
+	return t.processCaptionTracks(videoID, transcripts, trascript_data.Title, preserve_formatting), nil
 }
 
-func (t *transcriptService) processCaptionTracks(video_id string, captionTracks []yt_transcript_models.CaptionTrack, preserve_formatting bool) []yt_transcript_models.Transcript {
+func (t *transcriptService) processCaptionTracks(video_id string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserve_formatting bool) []yt_transcript_models.Transcript {
 	resultChan := make(chan transcriptResult, len(captionTracks))
 	var wg sync.WaitGroup
 
@@ -71,6 +71,7 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 
 			result := yt_transcript_models.Transcript{
 				VideoID:        video_id,
+				VideoTitle:     title,
 				Language:       tr.Name.SimpleText,
 				LanguageCode:   tr.LanguageCode,
 				IsGenerated:    is_generated,
@@ -100,7 +101,7 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 	return results
 }
 
-func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcript_models.TranscriptData, error) {
+func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcript_models.VideoTranscriptData, error) {
 	// get the html
 	html, err := t.fetcher.FetchVideo(video_id)
 	if err != nil {
@@ -128,6 +129,8 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 	video_details := strings.Split(parts[1], `,"videoDetails`)[0]
 	video_details_parsed := strings.ReplaceAll(video_details, "\n", "")
 
+	title := strings.Split(strings.Split(parts[0], `<title>`)[1], `</title>`)[0]
+
 	var videoDetails yt_transcript_models.VideoDetails
 	err = json.Unmarshal([]byte(video_details_parsed), &videoDetails)
 	if err != nil {
@@ -141,7 +144,7 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 
 	transcripts := videoDetails.PlayerCaptionsTracklistRenderer
 
-	return transcripts, nil
+	return &yt_transcript_models.VideoTranscriptData{Transcripts: transcripts, Title: title}, nil
 }
 
 func (s transcriptService) getTranscriptsForLanguage(language []string, transcripts yt_transcript_models.TranscriptData) ([]yt_transcript_models.CaptionTrack, error) {

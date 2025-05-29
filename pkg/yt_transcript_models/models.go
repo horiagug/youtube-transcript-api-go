@@ -2,6 +2,7 @@ package yt_transcript_models
 
 type Transcript struct {
 	VideoID        string
+	VideoTitle     string
 	Language       string
 	LanguageCode   string
 	IsGenerated    bool
@@ -44,4 +45,10 @@ type TranscriptData struct {
 
 type VideoDetails struct {
 	PlayerCaptionsTracklistRenderer *TranscriptData `json:"playerCaptionsTracklistRenderer"`
+	Title                           string          `json:"title"`
+}
+
+type VideoTranscriptData struct {
+	Transcripts *TranscriptData
+	Title       string
 }

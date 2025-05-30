@@ -21,7 +21,6 @@ var preserve_formatting_default = false
 
 func NewClient(options ...Option) *YtTranscriptClient {
 
-	// Set default values
 	formatter := yt_transcript_formatters.NewJSONFormatter()
 	formatter.Configure(yt_transcript_formatters.WithPrettyPrint(true))
 

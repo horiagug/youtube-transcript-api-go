@@ -21,6 +21,7 @@ func TestGetTranscripts(t *testing.T) {
 	tests := []struct {
 		name               string
 		videoID            string
+		videoTitle         string
 		languages          []string
 		preserveFormatting bool
 		mockVideoHTML      string
@@ -31,9 +32,10 @@ func TestGetTranscripts(t *testing.T) {
 		{
 			name:               "Success case - Single transcript",
 			videoID:            "abc123",
+			videoTitle:         "Test Video",
 			languages:          []string{"en"},
 			preserveFormatting: false,
-			mockVideoHTML:      `{"captions":{"playerCaptionsTracklistRenderer":{"captionTracks":[{"baseUrl":"http://example.com/transcript","name":{"simpleText":"English"},"languageCode":"en","kind":"asr","isTranslatable":true}]}},"videoDetails":{"someKey":"some details"}}`,
+			mockVideoHTML:      `<title>Test Video</title>{"captions":{"playerCaptionsTracklistRenderer":{"captionTracks":[{"baseUrl":"http://example.com/transcript","name":{"simpleText":"English"},"languageCode":"en","kind":"asr","isTranslatable":true}]}},"videoDetails":{"someKey":"some details"}}`,
 			mockTranscriptXML: `<?xml version="1.0" encoding="utf-8" ?><transcript>
 		              <text start="0" dur="1">Hello world</text>
 		          </transcript>`,
@@ -41,6 +43,7 @@ func TestGetTranscripts(t *testing.T) {
 			expectedResult: []yt_transcript_models.Transcript{
 				{
 					VideoID:        "abc123",
+					VideoTitle:     "Test Video",
 					Language:       "English",
 					LanguageCode:   "en",
 					IsGenerated:    false,
@@ -58,6 +61,7 @@ func TestGetTranscripts(t *testing.T) {
 		{
 			name:          "Too many requests",
 			videoID:       "abc123",
+			videoTitle:    "Test Video",
 			languages:     []string{"en"},
 			mockVideoHTML: `<div class="g-recaptcha"></div>`,
 			expectedError: errors.New("failed to extract list of transcripts: TooManyRequests"),
@@ -65,6 +69,7 @@ func TestGetTranscripts(t *testing.T) {
 		{
 			name:          "No Playability Status",
 			videoID:       "abc123",
+			videoTitle:    "Test Video",
 			languages:     []string{"en"},
 			mockVideoHTML: `{"someOtherData": true}`,
 			expectedError: errors.New("failed to extract list of transcripts: VideoUnavailable"),
@@ -72,6 +77,7 @@ func TestGetTranscripts(t *testing.T) {
 		{
 			name:          "No Transcript Data",
 			videoID:       "nonexistent",
+			videoTitle:    "Test Video",
 			languages:     []string{"en"},
 			mockVideoHTML: `{"playabilityStatus": {"status": "ERROR"}}`,
 			expectedError: errors.New("failed to extract list of transcripts: NoTranscriptData"),
@@ -200,4 +206,66 @@ func TestProcessCaptionTracks(t *testing.T) {
 		assert.Empty(t, results)
 		fetcher.AssertExpectations(t)
 	})
+}
+
+func TestExtractTitle(t *testing.T) {
+	tests := []struct {
+		name          string
+		inputHTML     string
+		expectedTitle string
+	}{
+		{
+			name:          "Valid title tag",
+			inputHTML:     `<html><head><title>My Video Title</title></head><body>Hello</body></html>`,
+			expectedTitle: "My Video Title",
+		},
+		{
+			name:          "Title tag with HTML entities",
+			inputHTML:     `<html><head><title>My Video &amp; Title</title></head><body></body></html>`,
+			expectedTitle: "My Video & Title",
+		},
+		{
+			name:          "No title tag",
+			inputHTML:     `<html><head></head><body>No title here</body></html>`,
+			expectedTitle: "",
+		},
+		{
+			name:          "Empty title tag",
+			inputHTML:     `<html><head><title></title></head><body></body></html>`,
+			expectedTitle: "",
+		},
+		{
+			name:          "Title tag deeply nested",
+			inputHTML:     `<html><body><div><head><title>Deep Title</title></head></div></body></html>`,
+			expectedTitle: "Deep Title",
+		},
+		{
+			name:          "Multiple title tags (first should be picked)",
+			inputHTML:     `<html><head><title>First Title</title><title>Second Title</title></head><body></body></html>`,
+			expectedTitle: "First Title",
+		},
+		{
+			name:          "Complex HTML with title",
+			inputHTML:     `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>A Great Video - YouTube</title></head><body><p>Some content</p></body></html>`,
+			expectedTitle: "A Great Video - YouTube",
+		},
+		{
+			name:          "Malformed HTML (title outside head)",
+			inputHTML:     `<html><body><title>Malformed Title</title></body></html>`,
+			expectedTitle: "Malformed Title",
+		},
+
+		{
+			name:          "Escaped characters in title",
+			inputHTML:     `<html><body><title>What&#39;s new in Go</title></body></html>`,
+			expectedTitle: "What's new in Go",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractTitle(tt.inputHTML)
+			assert.Equal(t, tt.expectedTitle, result)
+		})
+	}
 }

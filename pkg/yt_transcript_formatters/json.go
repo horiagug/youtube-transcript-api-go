@@ -54,7 +54,6 @@ func (f *JSONFormatter) Format(transcripts []yt_transcript_models.Transcript) (s
 	jsonTranscripts := make([]JSONTranscripts, len(transcripts))
 
 	for i, transcript := range transcripts {
-		// Convert transcript lines to output format
 		lines := make([]JSONTranscriptLine, len(transcript.Lines))
 		for j, line := range transcript.Lines {
 			if f.IncludeTimestamps {

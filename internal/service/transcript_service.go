@@ -9,6 +9,7 @@ import (
 
 	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
 	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"golang.org/x/net/html"
 )
 
 type TranscriptService interface {
@@ -51,13 +52,12 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 	resultChan := make(chan transcriptResult, len(captionTracks))
 	var wg sync.WaitGroup
 
-	// Launch goroutines for each caption track
+	// launch goroutines for each caption track
 	for _, transcript := range captionTracks {
 		wg.Add(1)
 		go func(tr yt_transcript_models.CaptionTrack) {
 			defer wg.Done()
 
-			// Process single transcript
 			is_generated := true
 			if tr.Kind != nil && *tr.Kind == "asr" {
 				is_generated = false
@@ -83,13 +83,11 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 		}(transcript)
 	}
 
-	// Close channel when all goroutines are done
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
 
-	// Collect results
 	var results []yt_transcript_models.Transcript
 	for result := range resultChan {
 		if result.err != nil {
@@ -101,8 +99,32 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 	return results
 }
 
+func extractTitle(htmlContent string) string {
+	doc, err := html.Parse(strings.NewReader(htmlContent))
+	if err != nil {
+		fmt.Printf("Error fetching the title")
+		return ""
+	}
+
+	var title string
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "title" {
+			if n.FirstChild != nil {
+				title = n.FirstChild.Data
+				return
+			}
+		}
+		for c := n.FirstChild; c != nil && title == ""; c = c.NextSibling {
+			f(c)
+		}
+	}
+
+	f(doc)
+	return title
+}
+
 func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcript_models.VideoTranscriptData, error) {
-	// get the html
 	html, err := t.fetcher.FetchVideo(video_id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch video page: %w", err)
@@ -110,8 +132,9 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 
 	body := string(html)
 
-	parts := strings.Split(body, `"captions":`)
+	title := extractTitle(body)
 
+	parts := strings.Split(body, `"captions":`)
 	if len(parts) <= 1 {
 		if strings.Contains(body, `class="g-recaptcha"`) {
 			return nil, fmt.Errorf("TooManyRequests")
@@ -128,8 +151,6 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 
 	video_details := strings.Split(parts[1], `,"videoDetails`)[0]
 	video_details_parsed := strings.ReplaceAll(video_details, "\n", "")
-
-	title := strings.Split(strings.Split(parts[0], `<title>`)[1], `</title>`)[0]
 
 	var videoDetails yt_transcript_models.VideoDetails
 	err = json.Unmarshal([]byte(video_details_parsed), &videoDetails)

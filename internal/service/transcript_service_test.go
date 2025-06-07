@@ -175,8 +175,9 @@ func TestProcessCaptionTracks(t *testing.T) {
 		fetcher.On("Fetch", "http://example.com/en", mock.Anything).Return([]byte(mockXML), nil)
 		fetcher.On("Fetch", "http://example.com/es", mock.Anything).Return([]byte(mockXML), nil)
 
-		results := service.processCaptionTracks("test123", captionTracks, "title", false)
+		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)
 
+		assert.NoError(t, err)
 		assert.Len(t, results, 2)
 		assert.Equal(t, "English", results[0].Language)
 		assert.Equal(t, "Spanish", results[1].Language)
@@ -201,8 +202,9 @@ func TestProcessCaptionTracks(t *testing.T) {
 		fetcher.On("Fetch", "http://example.com/en", mock.Anything).
 			Return([]byte{}, errors.New("failed to fetch"))
 
-		results := service.processCaptionTracks("test123", captionTracks, "title", false)
+		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)
 
+		assert.Error(t, err)
 		assert.Empty(t, results)
 		fetcher.AssertExpectations(t)
 	})

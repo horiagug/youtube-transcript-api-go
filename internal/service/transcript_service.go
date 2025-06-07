@@ -45,14 +45,13 @@ func (t transcriptService) GetTranscripts(videoID string, languages []string, pr
 		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to get transcript: %w", err)
 	}
 
-	return t.processCaptionTracks(videoID, transcripts, trascript_data.Title, preserve_formatting), nil
+	return t.processCaptionTracks(videoID, transcripts, trascript_data.Title, preserve_formatting)
 }
 
-func (t *transcriptService) processCaptionTracks(video_id string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserve_formatting bool) []yt_transcript_models.Transcript {
+func (t *transcriptService) processCaptionTracks(video_id string, captionTracks []yt_transcript_models.CaptionTrack, title string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
 	resultChan := make(chan transcriptResult, len(captionTracks))
 	var wg sync.WaitGroup
 
-	// launch goroutines for each caption track
 	for _, transcript := range captionTracks {
 		wg.Add(1)
 		go func(tr yt_transcript_models.CaptionTrack) {
@@ -92,11 +91,11 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 	for result := range resultChan {
 		if result.err != nil {
 			fmt.Printf("Error processing transcript: %v\n", result.err)
-			continue
+			return results, result.err
 		}
 		results = append(results, result.transcript)
 	}
-	return results
+	return results, nil
 }
 
 func extractTitle(htmlContent string) string {

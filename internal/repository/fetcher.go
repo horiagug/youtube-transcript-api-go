@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"time"
 )
 
 var video_base_url = "https://www.youtube.com/watch?v=%s"
@@ -21,27 +22,50 @@ func NewHTMLFetcher() *HTMLFetcher {
 }
 
 func (f *HTMLFetcher) Fetch(url string, cookie *http.Cookie) ([]byte, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	var body []byte
+	var err error
+
+	for i := range 3 {
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		req.Header.Set("Accept-Language", "en-US")
+		if cookie != nil {
+			req.AddCookie(cookie)
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			fmt.Printf("Retry %d: failed to fetch: %v\n", i+1, err)
+			time.Sleep(2 * time.Second) // Wait before retrying
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			fmt.Printf("Retry %d: received non-OK status code: %d\n", i+1, resp.StatusCode)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("Retry %d: failed to read response body: %v\n", i+1, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if len(body) > 0 {
+			return body, nil // Success
+		}
+
+		fmt.Printf("Retry %d: empty response body\n", i+1)
+		time.Sleep(2 * time.Second)
 	}
 
-	req.Header.Set("Accept-Language", "en-US")
-	if cookie != nil {
-		req.AddCookie(cookie)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received non-OK status code: %d", resp.StatusCode)
-	}
-
-	return io.ReadAll(resp.Body)
+	return nil, fmt.Errorf("failed to fetch after retries: %w", err)
 }
 
 func (f *HTMLFetcher) FetchVideo(videoID string) ([]byte, error) {

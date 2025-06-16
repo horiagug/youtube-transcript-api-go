@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -98,6 +99,20 @@ func (t *transcriptService) processCaptionTracks(video_id string, captionTracks 
 	return results, nil
 }
 
+func extractInnerTubeApiKey(htmlContent string) string {
+	// Define the regex pattern for INNERTUBE_API_KEY
+	pattern := `"INNERTUBE_API_KEY":\s*"([a-zA-Z0-9_-]+)"`
+	re := regexp.MustCompile(pattern)
+
+	// Search for the pattern in the HTML content
+	match := re.FindStringSubmatch(htmlContent)
+	if len(match) == 2 {
+		return match[1]
+	}
+
+	return ""
+}
+
 func extractTitle(htmlContent string) string {
 	doc, err := html.Parse(strings.NewReader(htmlContent))
 	if err != nil {
@@ -133,36 +148,30 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 
 	title := extractTitle(body)
 
-	parts := strings.Split(body, `"captions":`)
-	if len(parts) <= 1 {
-		if strings.Contains(body, `class="g-recaptcha"`) {
-			return nil, fmt.Errorf("TooManyRequests")
-		}
-		if !strings.Contains(body, `"playabilityStatus":`) {
-			return nil, fmt.Errorf("VideoUnavailable")
-		}
-		return nil, fmt.Errorf("NoTranscriptData")
-	}
+	innertube_api_key := extractInnerTubeApiKey(body)
 
-	if !strings.Contains(body, `"captions":`) {
-		return nil, fmt.Errorf("NoTranscriptData")
-	}
+	innertube_data, err := t.fetcher.FetchInnertubeData(video_id, innertube_api_key)
 
-	video_details := strings.Split(parts[1], `,"videoDetails`)[0]
-	video_details_parsed := strings.ReplaceAll(video_details, "\n", "")
-
-	var videoDetails yt_transcript_models.VideoDetails
-	err = json.Unmarshal([]byte(video_details_parsed), &videoDetails)
 	if err != nil {
-		fmt.Println("Error unmarshalling JSON")
+		return nil, fmt.Errorf("failed to fetch video page: %w", err)
+	}
+
+	innertube_data_json, err := json.Marshal(innertube_data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal innertube data: %w", err)
+	}
+
+	var videoDetails yt_transcript_models.InnertubeData
+	err = json.Unmarshal(innertube_data_json, &videoDetails)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
-	if videoDetails.PlayerCaptionsTracklistRenderer == nil {
+	if videoDetails.Captions.PlayerCaptionsTracklistRenderer == nil {
 		return nil, fmt.Errorf("playerCaptionsTracklistRenderer not found")
 	}
 
-	transcripts := videoDetails.PlayerCaptionsTracklistRenderer
+	transcripts := videoDetails.Captions.PlayerCaptionsTracklistRenderer
 
 	return &yt_transcript_models.VideoTranscriptData{Transcripts: transcripts, Title: title}, nil
 }
@@ -191,7 +200,8 @@ func (s transcriptService) getTranscriptsForLanguage(language []string, transcri
 }
 
 func (s transcriptService) getTranscriptFromTrack(track yt_transcript_models.CaptionTrack, preserve_formatting bool) ([]yt_transcript_models.TranscriptLine, error) {
-	body, err := s.fetcher.Fetch(track.BaseUrl, nil)
+	url := strings.Replace(track.BaseUrl, "&fmt=srv3", "", -1)
+	body, err := s.fetcher.Fetch(url, nil)
 	if err != nil {
 		return []yt_transcript_models.TranscriptLine{}, fmt.Errorf("failed to fetch transcript: %w", err)
 	}

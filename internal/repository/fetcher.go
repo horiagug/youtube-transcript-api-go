@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,9 +12,19 @@ import (
 
 var video_base_url = "https://www.youtube.com/watch?v=%s"
 
+const INNERTUBE_API_URL = "https://www.youtube.com/youtubei/v1/player?key=%s"
+
+var INNERTUBE_CONTEXT = map[string]interface{}{
+	"client": map[string]interface{}{
+		"clientName":    "ANDROID",
+		"clientVersion": "20.10.38",
+	},
+}
+
 type HTMLFetcherType interface {
 	Fetch(url string, cookie *http.Cookie) ([]byte, error)
 	FetchVideo(videoID string) ([]byte, error)
+	FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error)
 }
 
 type HTMLFetcher struct{}
@@ -117,4 +129,43 @@ func (f *HTMLFetcher) createConsentCookie(videoID string) (*http.Cookie, error) 
 func consentRequired(body []byte) bool {
 	consentRegex := regexp.MustCompile(`action="https://consent\.youtube\.com/s`)
 	return consentRegex.Match(body)
+}
+
+func (f *HTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error) {
+
+	url := fmt.Sprintf(INNERTUBE_API_URL, apiKey)
+
+	payload := map[string]interface{}{
+		"context": INNERTUBE_CONTEXT,
+		"videoId": videoID,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-OK status code: %d", resp.StatusCode)
+	}
+
+	var responseData map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&responseData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode response JSON: %w", err)
+	}
+
+	return responseData, nil
 }

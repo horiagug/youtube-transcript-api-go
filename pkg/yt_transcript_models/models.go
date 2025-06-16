@@ -48,7 +48,15 @@ type VideoDetails struct {
 	Title                           string          `json:"title"`
 }
 
+type CaptionsDetails struct {
+	PlayerCaptionsTracklistRenderer *TranscriptData `json:"playerCaptionsTracklistRenderer"`
+}
+
 type VideoTranscriptData struct {
 	Transcripts *TranscriptData
 	Title       string
+}
+
+type InnertubeData struct {
+	Captions CaptionsDetails `json:"captions"`
 }

@@ -176,15 +176,15 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 	return &yt_transcript_models.VideoTranscriptData{Transcripts: transcripts, Title: title}, nil
 }
 
-func (s transcriptService) getTranscriptsForLanguage(language []string, transcripts yt_transcript_models.TranscriptData) ([]yt_transcript_models.CaptionTrack, error) {
+func (s transcriptService) getTranscriptsForLanguage(languages []string, transcripts yt_transcript_models.TranscriptData) ([]yt_transcript_models.CaptionTrack, error) {
 
-	if len(language) == 0 {
+	if len(languages) == 0 {
 		return transcripts.CaptionTracks, nil
 	}
 
 	caption_tracks := make([]yt_transcript_models.CaptionTrack, 0)
 
-	for _, lang := range language {
+	for _, lang := range languages {
 		for _, track := range transcripts.CaptionTracks {
 			if track.LanguageCode == lang {
 				caption_tracks = append(caption_tracks, track)
@@ -193,7 +193,7 @@ func (s transcriptService) getTranscriptsForLanguage(language []string, transcri
 	}
 
 	if len(caption_tracks) == 0 {
-		return []yt_transcript_models.CaptionTrack{}, fmt.Errorf("no transcript found for languages %s", language)
+		return []yt_transcript_models.CaptionTrack{}, fmt.Errorf("no transcript found for languages %s", languages)
 	}
 
 	return caption_tracks, nil

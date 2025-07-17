@@ -1,6 +1,7 @@
 package fixtures
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/stretchr/testify/mock"
@@ -18,5 +19,15 @@ func (m *MockHTMLFetcher) Fetch(url string, cookie *http.Cookie) ([]byte, error)
 
 func (m *MockHTMLFetcher) FetchVideo(videoID string) ([]byte, error) {
 	args := m.Called(videoID)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *MockHTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error) {
+	args := m.Called(videoID, apiKey)
+	return args.Get(0).(map[string]interface{}), args.Error(1)
+}
+
+func (m *MockHTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *http.Cookie) ([]byte, error) {
+	args := m.Called(ctx, url, cookie)
 	return args.Get(0).([]byte), args.Error(1)
 }

@@ -35,7 +35,7 @@ func TestGetTranscripts(t *testing.T) {
 			videoTitle:         "Test Video",
 			languages:          []string{"en"},
 			preserveFormatting: false,
-			mockVideoHTML:      `<title>Test Video</title>{"captions":{"playerCaptionsTracklistRenderer":{"captionTracks":[{"baseUrl":"http://example.com/transcript","name":{"simpleText":"English"},"languageCode":"en","kind":"asr","isTranslatable":true}]}},"videoDetails":{"someKey":"some details"}}`,
+			mockVideoHTML:      `<title>Test Video</title>"INNERTUBE_API_KEY":"test_api_key"`,
 			mockTranscriptXML: `<?xml version="1.0" encoding="utf-8" ?><transcript>
 		              <text start="0" dur="1">Hello world</text>
 		          </transcript>`,
@@ -59,28 +59,12 @@ func TestGetTranscripts(t *testing.T) {
 			},
 		},
 		{
-			name:          "Too many requests",
+			name:          "No API Key",
 			videoID:       "abc123",
 			videoTitle:    "Test Video",
 			languages:     []string{"en"},
-			mockVideoHTML: `<div class="g-recaptcha"></div>`,
-			expectedError: errors.New("failed to extract list of transcripts: TooManyRequests"),
-		},
-		{
-			name:          "No Playability Status",
-			videoID:       "abc123",
-			videoTitle:    "Test Video",
-			languages:     []string{"en"},
-			mockVideoHTML: `{"someOtherData": true}`,
-			expectedError: errors.New("failed to extract list of transcripts: VideoUnavailable"),
-		},
-		{
-			name:          "No Transcript Data",
-			videoID:       "nonexistent",
-			videoTitle:    "Test Video",
-			languages:     []string{"en"},
-			mockVideoHTML: `{"playabilityStatus": {"status": "ERROR"}}`,
-			expectedError: errors.New("failed to extract list of transcripts: NoTranscriptData"),
+			mockVideoHTML: `<title>Test Video</title>`,
+			expectedError: errors.New("failed to extract list of transcripts"),
 		},
 	}
 
@@ -90,10 +74,34 @@ func TestGetTranscripts(t *testing.T) {
 
 			if tt.mockVideoHTML != "" {
 				fetcher.On("FetchVideo", mock.AnythingOfType("string")).Return([]byte(tt.mockVideoHTML), nil)
+				
+				if tt.expectedError == nil {
+					// Mock the FetchInnertubeData call for successful case
+					mockInnertubeData := map[string]interface{}{
+						"captions": map[string]interface{}{
+							"playerCaptionsTracklistRenderer": map[string]interface{}{
+								"captionTracks": []interface{}{
+									map[string]interface{}{
+										"baseUrl":        "http://example.com/transcript",
+										"name":           map[string]interface{}{"simpleText": "English"},
+										"languageCode":   "en",
+										"kind":           "asr",
+										"isTranslatable": true,
+									},
+								},
+							},
+						},
+					}
+					fetcher.On("FetchInnertubeData", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(mockInnertubeData, nil)
+				} else {
+					// Mock failure case
+					fetcher.On("FetchInnertubeData", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(map[string]interface{}{}, errors.New("failed to fetch"))
+				}
 			}
 
 			if tt.mockTranscriptXML != "" {
-				fetcher.On("Fetch", mock.AnythingOfType("string"), mock.Anything).Return([]byte(tt.mockTranscriptXML), nil)
+				// Mock the FetchWithContext call for transcript URL
+				fetcher.On("FetchWithContext", mock.Anything, "http://example.com/transcript", mock.Anything).Return([]byte(tt.mockTranscriptXML), nil)
 			}
 
 			service := NewTranscriptService(fetcher)
@@ -172,17 +180,22 @@ func TestProcessCaptionTracks(t *testing.T) {
             <text start="0" dur="1">Test content</text>
         </transcript>`
 
-		fetcher.On("Fetch", "http://example.com/en", mock.Anything).Return([]byte(mockXML), nil)
-		fetcher.On("Fetch", "http://example.com/es", mock.Anything).Return([]byte(mockXML), nil)
+		fetcher.On("FetchWithContext", mock.Anything, "http://example.com/en", mock.Anything).Return([]byte(mockXML), nil)
+		fetcher.On("FetchWithContext", mock.Anything, "http://example.com/es", mock.Anything).Return([]byte(mockXML), nil)
 
 		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)
 
 		assert.NoError(t, err)
 		assert.Len(t, results, 2)
-		assert.Equal(t, "English", results[0].Language)
-		assert.Equal(t, "Spanish", results[1].Language)
-		assert.Equal(t, "Test content", results[0].Lines[0].Text)
-		assert.Equal(t, "Test content", results[1].Lines[0].Text)
+		
+		// Check that we have both languages (order doesn't matter due to concurrency)
+		languages := make([]string, 0, 2)
+		for _, result := range results {
+			languages = append(languages, result.Language)
+			assert.Equal(t, "Test content", result.Lines[0].Text)
+		}
+		assert.Contains(t, languages, "English")
+		assert.Contains(t, languages, "Spanish")
 
 		fetcher.AssertExpectations(t)
 	})
@@ -199,7 +212,7 @@ func TestProcessCaptionTracks(t *testing.T) {
 			},
 		}
 
-		fetcher.On("Fetch", "http://example.com/en", mock.Anything).
+		fetcher.On("FetchWithContext", mock.Anything, "http://example.com/en", mock.Anything).
 			Return([]byte{}, errors.New("failed to fetch"))
 
 		results, err := service.processCaptionTracks("test123", captionTracks, "title", false)

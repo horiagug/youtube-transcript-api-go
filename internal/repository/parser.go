@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
 )
@@ -18,7 +19,12 @@ var formattingTags = []string{
 	"strong", "em", "b", "i", "mark", "small", "del", "ins", "sub", "sup",
 }
 
-var htmlRegex = regexp.MustCompile(`(?i)<[^>]*>`)
+// Pre-compiled regex patterns for better performance
+var (
+	htmlRegex     = regexp.MustCompile(`(?i)<[^>]*>`)
+	regexCache    = make(map[string]*regexp.Regexp)
+	regexCacheMu  sync.RWMutex
+)
 
 func NewTranscriptParser(preserveFormatting bool) *transcriptParser {
 	htmlRegex := getHTMLRegex(preserveFormatting)
@@ -27,10 +33,30 @@ func NewTranscriptParser(preserveFormatting bool) *transcriptParser {
 
 func getHTMLRegex(preserveFormatting bool) *regexp.Regexp {
 	if preserveFormatting {
+		// Use cached regex or compile and cache it
+		cacheKey := "formatting_" + strings.Join(formattingTags, "|")
+		
+		regexCacheMu.RLock()
+		if regex, exists := regexCache[cacheKey]; exists {
+			regexCacheMu.RUnlock()
+			return regex
+		}
+		regexCacheMu.RUnlock()
+		
+		regexCacheMu.Lock()
+		defer regexCacheMu.Unlock()
+		
+		// Double-check after acquiring write lock
+		if regex, exists := regexCache[cacheKey]; exists {
+			return regex
+		}
+		
 		formatsRegex := `</?(?:` + strings.Join(formattingTags, "|") + `)\b[^>]*>`
-		return regexp.MustCompile(`(?i)<[^>]*>(?:(?i)` + formatsRegex + `)?`)
+		regex := regexp.MustCompile(`(?i)<[^>]*>(?:(?i)` + formatsRegex + `)?`)
+		regexCache[cacheKey] = regex
+		return regex
 	}
-	return regexp.MustCompile(`(?i)<[^>]*>`)
+	return htmlRegex
 }
 
 func cleanHTML(text string, preserveFormatting bool) string {

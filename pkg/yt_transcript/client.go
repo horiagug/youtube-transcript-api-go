@@ -42,10 +42,10 @@ func NewClient(options ...Option) *YtTranscriptClient {
 }
 
 func (c *YtTranscriptClient) GetFormattedTranscripts(videoID string, languages []string, preserve_formatting bool) (string, error) {
-	_, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
 	defer cancel()
 
-	transcripts, err := c.transcriptService.GetTranscripts(videoID, languages, preserve_formatting)
+	transcripts, err := c.transcriptService.GetTranscriptsWithContext(ctx, videoID, languages, preserve_formatting)
 	if err != nil {
 		return "", err
 	}
@@ -58,10 +58,10 @@ func (c *YtTranscriptClient) GetFormattedTranscripts(videoID string, languages [
 }
 
 func (c *YtTranscriptClient) GetTranscripts(videoID string, languages []string) ([]yt_transcript_models.Transcript, error) {
-	_, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout)*time.Second)
 	defer cancel()
 
-	transcripts, err := c.transcriptService.GetTranscripts(videoID, languages, true)
+	transcripts, err := c.transcriptService.GetTranscriptsWithContext(ctx, videoID, languages, true)
 	if err != nil {
 		return []yt_transcript_models.Transcript{}, err
 	}

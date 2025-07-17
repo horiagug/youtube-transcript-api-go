@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,6 +26,18 @@ type HTMLFetcherType interface {
 	Fetch(url string, cookie *http.Cookie) ([]byte, error)
 	FetchVideo(videoID string) ([]byte, error)
 	FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error)
+	FetchWithContext(ctx context.Context, url string, cookie *http.Cookie) ([]byte, error)
+}
+
+// Shared HTTP client with optimized connection pooling
+var sharedHTTPClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableKeepAlives:   false,
+	},
 }
 
 type HTMLFetcher struct{}
@@ -34,11 +47,15 @@ func NewHTMLFetcher() *HTMLFetcher {
 }
 
 func (f *HTMLFetcher) Fetch(url string, cookie *http.Cookie) ([]byte, error) {
+	return f.FetchWithContext(context.Background(), url, cookie)
+}
+
+func (f *HTMLFetcher) FetchWithContext(ctx context.Context, url string, cookie *http.Cookie) ([]byte, error) {
 	var body []byte
 	var err error
 
 	for i := range 3 {
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
@@ -48,7 +65,7 @@ func (f *HTMLFetcher) Fetch(url string, cookie *http.Cookie) ([]byte, error) {
 			req.AddCookie(cookie)
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			fmt.Printf("Retry %d: failed to fetch: %v\n", i+1, err)
 			time.Sleep(2 * time.Second) // Wait before retrying
@@ -150,8 +167,7 @@ func (f *HTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[str
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := sharedHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}

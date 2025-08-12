@@ -25,7 +25,7 @@ var INNERTUBE_CONTEXT = map[string]interface{}{
 type HTMLFetcherType interface {
 	Fetch(url string, cookie *http.Cookie) ([]byte, error)
 	FetchVideo(videoID string) ([]byte, error)
-	FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error)
+	FetchInnertubeData(ctx context.Context, videoID string, apiKey string, cookie *http.Cookie) (map[string]interface{}, error)
 	FetchWithContext(ctx context.Context, url string, cookie *http.Cookie) ([]byte, error)
 }
 
@@ -148,7 +148,7 @@ func consentRequired(body []byte) bool {
 	return consentRegex.Match(body)
 }
 
-func (f *HTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error) {
+func (f *HTMLFetcher) FetchInnertubeData(ctx context.Context, videoID string, apiKey string, cookie *http.Cookie) (map[string]interface{}, error) {
 
 	url := fmt.Sprintf(INNERTUBE_API_URL, apiKey)
 
@@ -161,11 +161,15 @@ func (f *HTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[str
 		return nil, fmt.Errorf("failed to marshal JSON payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
 
 	resp, err := sharedHTTPClient.Do(req)
 	if err != nil {
@@ -177,8 +181,27 @@ func (f *HTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[str
 		return nil, fmt.Errorf("received non-OK status code: %d", resp.StatusCode)
 	}
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if consentRequired(body) && cookie == nil {
+
+		cookie, err := f.createConsentCookie(videoID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create consent cookie: %w", err)
+		}
+
+		responseData, err := f.FetchInnertubeData(ctx, videoID, apiKey, cookie)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch video page after setting consent: %w", err)
+		}
+		return responseData, nil
+	}
+
 	var responseData map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&responseData)
+	err = json.Unmarshal(body, &responseData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode response JSON: %w", err)
 	}

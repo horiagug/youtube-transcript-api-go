@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/horiagug/youtube-transcript-api-go/internal/repository/fixtures"
 	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestContextTimeoutRespected(t *testing.T) {
@@ -104,3 +104,4 @@ func TestVideoIDSanitization(t *testing.T) {
 		})
 	}
 }
+

@@ -22,7 +22,7 @@ func (m *MockHTMLFetcher) FetchVideo(videoID string) ([]byte, error) {
 	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *MockHTMLFetcher) FetchInnertubeData(videoID string, apiKey string) (map[string]interface{}, error) {
+func (m *MockHTMLFetcher) FetchInnertubeData(ctx context.Context, videoID string, apiKey string, cookie *http.Cookie) (map[string]interface{}, error) {
 	args := m.Called(videoID, apiKey)
 	return args.Get(0).(map[string]interface{}), args.Error(1)
 }

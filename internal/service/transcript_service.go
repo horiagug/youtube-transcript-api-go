@@ -40,7 +40,7 @@ func (t transcriptService) GetTranscripts(videoID string, languages []string, pr
 func (t transcriptService) GetTranscriptsWithContext(ctx context.Context, videoID string, languages []string, preserve_formatting bool) ([]yt_transcript_models.Transcript, error) {
 	videoID = sanitizeVideoId(videoID)
 
-	trascript_data, err := t.extractTranscriptList(videoID)
+	trascript_data, err := t.extractTranscriptList(ctx, videoID)
 	if err != nil {
 		return []yt_transcript_models.Transcript{}, fmt.Errorf("failed to extract list of transcripts: %w", err)
 	}
@@ -122,7 +122,6 @@ func extractInnerTubeApiKey(htmlContent string) string {
 	return ""
 }
 
-// extractInnertubeVideoDetails efficiently extracts video details from the raw response
 func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_models.InnertubeData, error) {
 	// Extract captions section directly
 	captions, ok := data["captions"].(map[string]interface{})
@@ -142,29 +141,29 @@ func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_m
 		for _, track := range tracks {
 			if trackMap, ok := track.(map[string]interface{}); ok {
 				captionTrack := yt_transcript_models.CaptionTrack{}
-				
+
 				if baseUrl, ok := trackMap["baseUrl"].(string); ok {
 					captionTrack.BaseUrl = baseUrl
 				}
-				
+
 				if langCode, ok := trackMap["languageCode"].(string); ok {
 					captionTrack.LanguageCode = langCode
 				}
-				
+
 				if name, ok := trackMap["name"].(map[string]interface{}); ok {
 					if simpleText, ok := name["simpleText"].(string); ok {
 						captionTrack.Name = yt_transcript_models.LanguageName{SimpleText: simpleText}
 					}
 				}
-				
+
 				if kind, ok := trackMap["kind"].(string); ok {
 					captionTrack.Kind = &kind
 				}
-				
+
 				if isTranslatable, ok := trackMap["isTranslatable"].(bool); ok {
 					captionTrack.IsTranslatable = isTranslatable
 				}
-				
+
 				captionTracks = append(captionTracks, captionTrack)
 			}
 		}
@@ -177,17 +176,17 @@ func extractInnertubeVideoDetails(data map[string]interface{}) (*yt_transcript_m
 		for _, lang := range transLangs {
 			if langMap, ok := lang.(map[string]interface{}); ok {
 				langData := yt_transcript_models.LanguageData{}
-				
+
 				if langCode, ok := langMap["languageCode"].(string); ok {
 					langData.LanguageCode = langCode
 				}
-				
+
 				if langName, ok := langMap["languageName"].(map[string]interface{}); ok {
 					if simpleText, ok := langName["simpleText"].(string); ok {
 						langData.Language = yt_transcript_models.LanguageName{SimpleText: simpleText}
 					}
 				}
-				
+
 				langs = append(langs, langData)
 			}
 		}
@@ -233,7 +232,7 @@ func extractTitle(htmlContent string) string {
 	return title
 }
 
-func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcript_models.VideoTranscriptData, error) {
+func (t *transcriptService) extractTranscriptList(ctx context.Context, video_id string) (*yt_transcript_models.VideoTranscriptData, error) {
 	html, err := t.fetcher.FetchVideo(video_id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch video page: %w", err)
@@ -245,7 +244,7 @@ func (t *transcriptService) extractTranscriptList(video_id string) (*yt_transcri
 
 	innertube_api_key := extractInnerTubeApiKey(body)
 
-	innertube_data, err := t.fetcher.FetchInnertubeData(video_id, innertube_api_key)
+	innertube_data, err := t.fetcher.FetchInnertubeData(ctx, video_id, innertube_api_key, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch video page: %w", err)
 	}

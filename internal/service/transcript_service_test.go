@@ -74,7 +74,7 @@ func TestGetTranscripts(t *testing.T) {
 
 			if tt.mockVideoHTML != "" {
 				fetcher.On("FetchVideo", mock.AnythingOfType("string")).Return([]byte(tt.mockVideoHTML), nil)
-				
+
 				if tt.expectedError == nil {
 					// Mock the FetchInnertubeData call for successful case
 					mockInnertubeData := map[string]interface{}{
@@ -187,7 +187,7 @@ func TestProcessCaptionTracks(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Len(t, results, 2)
-		
+
 		// Check that we have both languages (order doesn't matter due to concurrency)
 		languages := make([]string, 0, 2)
 		for _, result := range results {

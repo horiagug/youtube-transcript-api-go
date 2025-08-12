@@ -144,7 +144,7 @@ func (f *HTMLFetcher) createConsentCookie(videoID string) (*http.Cookie, error) 
 }
 
 func consentRequired(body []byte) bool {
-	consentRegex := regexp.MustCompile(`action="https://consent\.youtube\.com/s`)
+	consentRegex := regexp.MustCompile(`https://consent\.youtube\.com/s`)
 	return consentRegex.Match(body)
 }
 

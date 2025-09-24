@@ -3,10 +3,10 @@ package service
 import (
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/horiagug/youtube-transcript-api-go/internal/repository"
 	"github.com/horiagug/youtube-transcript-api-go/internal/repository/fixtures"
 	"github.com/horiagug/youtube-transcript-api-go/pkg/yt_transcript_models"
+	"github.com/stretchr/testify/mock"
 )
 
 func BenchmarkProcessCaptionTracks(b *testing.B) {
@@ -49,7 +49,7 @@ func BenchmarkRegexCompilation(b *testing.B) {
 		<text start="0" dur="1"><b>Bold text</b> and <i>italic text</i> with <strong>strong text</strong></text>
 		<text start="1" dur="1">Regular text</text>
 	</transcript>`
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Test the optimized regex compilation via parsing
@@ -93,3 +93,4 @@ func BenchmarkExtractInnertubeVideoDetails(b *testing.B) {
 		}
 	}
 }
+

@@ -9,7 +9,8 @@ type Formatter interface {
 }
 
 type BaseFormatter struct {
-	IncludeTimestamps bool
+	IncludeTimestamps   bool
+	IncludeLanguageCode bool
 }
 
 type FormatterOption func(f *BaseFormatter)
@@ -17,5 +18,11 @@ type FormatterOption func(f *BaseFormatter)
 func WithTimestamps(include bool) FormatterOption {
 	return func(f *BaseFormatter) {
 		f.IncludeTimestamps = include
+	}
+}
+
+func WithLanguageCode(include bool) FormatterOption {
+	return func(f *BaseFormatter) {
+		f.IncludeLanguageCode = include
 	}
 }

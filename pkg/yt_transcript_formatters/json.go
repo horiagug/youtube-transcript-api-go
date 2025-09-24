@@ -13,7 +13,7 @@ type JSONTranscriptLine struct {
 }
 
 type JSONTranscripts struct {
-	LanguageCode string               `json:"language_code"`
+	LanguageCode *string              `json:"language_code"`
 	Transcripts  []JSONTranscriptLine `json:"transcripts"`
 }
 
@@ -27,7 +27,8 @@ type JSONFormatter struct {
 func NewJSONFormatter(baseOptions ...FormatterOption) *JSONFormatter {
 	f := &JSONFormatter{
 		BaseFormatter: BaseFormatter{
-			IncludeTimestamps: true,
+			IncludeTimestamps:   true,
+			IncludeLanguageCode: true,
 		},
 		PrettyPrint: false,
 	}
@@ -70,8 +71,10 @@ func (f *JSONFormatter) Format(transcripts []yt_transcript_models.Transcript) (s
 		}
 
 		jsonTranscripts[i] = JSONTranscripts{
-			LanguageCode: transcript.LanguageCode,
-			Transcripts:  lines,
+			Transcripts: lines,
+		}
+		if f.IncludeLanguageCode {
+			jsonTranscripts[i].LanguageCode = &transcript.LanguageCode
 		}
 	}
 

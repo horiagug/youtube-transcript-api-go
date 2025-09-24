@@ -287,10 +287,6 @@ func (s transcriptService) getTranscriptsForLanguage(languages []string, transcr
 	return caption_tracks, nil
 }
 
-func (s transcriptService) getTranscriptFromTrack(track yt_transcript_models.CaptionTrack, preserve_formatting bool) ([]yt_transcript_models.TranscriptLine, error) {
-	return s.getTranscriptFromTrackWithContext(context.Background(), track, preserve_formatting)
-}
-
 func (s transcriptService) getTranscriptFromTrackWithContext(ctx context.Context, track yt_transcript_models.CaptionTrack, preserve_formatting bool) ([]yt_transcript_models.TranscriptLine, error) {
 	url := strings.Replace(track.BaseUrl, "&fmt=srv3", "", -1)
 	body, err := s.fetcher.FetchWithContext(ctx, url, nil)

@@ -14,7 +14,8 @@ type TextFormatter struct {
 func NewTextFormatter(options ...FormatterOption) *TextFormatter {
 	f := &TextFormatter{
 		BaseFormatter: BaseFormatter{
-			IncludeTimestamps: true,
+			IncludeTimestamps:   true,
+			IncludeLanguageCode: true,
 		},
 	}
 
@@ -32,10 +33,22 @@ func (t *TextFormatter) Format(transcripts []yt_transcript_models.Transcript) (s
 		err  error
 	)
 
-	for _, transcript := range transcripts {
-		_, err = text.WriteString(fmt.Sprintf("Language: %s\n", transcript.Language))
-		if err != nil {
-			return "", err
+	for i, transcript := range transcripts {
+		if t.IncludeLanguageCode {
+			var language string
+			if transcript.Language != "" {
+				language = transcript.Language
+			} else if transcript.LanguageCode != "" {
+				language = transcript.LanguageCode
+			}
+
+			if language != "" {
+				_, err = text.WriteString(fmt.Sprintf("Language: %s\n", language))
+			}
+
+			if err != nil {
+				return "", err
+			}
 		}
 
 		for _, line := range transcript.Lines {
@@ -44,6 +57,10 @@ func (t *TextFormatter) Format(transcripts []yt_transcript_models.Transcript) (s
 			} else {
 				_, err = text.WriteString(line.Text + "\n")
 			}
+		}
+
+		if len(transcripts) > 1 && i < len(transcripts)-1 {
+			text.WriteString("\n")
 		}
 	}
 

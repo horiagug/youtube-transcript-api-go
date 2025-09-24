@@ -15,6 +15,7 @@ func main() {
 		formatter                = flag.String("formatter", "json", "Formatter to use (json, text)")
 		preserve_formatting      = flag.Bool("preserve_formatting", true, "Preserve formatting")
 		with_timestamps          = flag.Bool("with_timestamps", true, "Include timestamps")
+		with_language_code       = flag.Bool("with_language_code", true, "Include language code")
 		exclude_manually_created = flag.Bool("exclude_manually_created", false, "Exclude manually created subtitles") // not in use yet
 		exclude_auto_generated   = flag.Bool("exclude_auto_generated", false, "Exclude auto-generated subtitles")     // not in use yet
 	)
@@ -35,10 +36,12 @@ func main() {
 	if *formatter == "text" {
 		outputFormatter = yt_transcript_formatters.NewTextFormatter(
 			yt_transcript_formatters.WithTimestamps(*with_timestamps),
+			yt_transcript_formatters.WithLanguageCode(*with_language_code),
 		)
 	} else {
 		outputFormatter = yt_transcript_formatters.NewJSONFormatter(
 			yt_transcript_formatters.WithTimestamps(*with_timestamps),
+			yt_transcript_formatters.WithLanguageCode(*with_language_code),
 		)
 	}
 

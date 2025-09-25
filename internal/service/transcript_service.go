@@ -69,9 +69,9 @@ func (t *transcriptService) processCaptionTracksWithContext(ctx context.Context,
 		go func(tr yt_transcript_models.CaptionTrack) {
 			defer wg.Done()
 
-			is_generated := true
+			is_generated := false
 			if tr.Kind != nil && *tr.Kind == "asr" {
-				is_generated = false
+				is_generated = true
 			}
 
 			lines, err := t.getTranscriptFromTrackWithContext(ctx, tr, preserve_formatting)
